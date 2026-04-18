@@ -43,31 +43,6 @@
     }
     .sub-value { font-size: 1.2em; color: #00d2ff; }
 
-    /* Relay Buttons */
-    .button-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      gap: 15px;
-      margin-top: 15px;
-    }
-    button {
-      background-color: #333;
-      color: white;
-      border: 2px solid #555;
-      padding: 20px 10px;
-      font-size: 1.1em;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-weight: bold;
-    }
-    button.active {
-      background-color: #00d2ff;
-      border-color: #00d2ff;
-      color: #000;
-      box-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
-    }
-
     /* Roommate Split Grid */
     .split-grid {
       display: grid;
@@ -106,7 +81,7 @@
     @media (max-width: 600px) {
       .dashboard { grid-template-columns: 1fr; }
       .full-width { grid-column: span 1; }
-      .button-grid, .split-grid { grid-template-columns: 1fr 1fr; }
+      .split-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -117,34 +92,25 @@
   <div id="flameAlert">🔥 WARNING: FLAME DETECTED! ALL POWER CUT OFF 🔥</div>
 
   <div class="dashboard">
-    <div class="card full-width">
-      <h3>Device Controls</h3>
-      <div class="button-grid">
-        <button id="btnR1" onclick="toggleRelay('R1')">💡 Room 1 Light</button>
-        <button id="btnR2" onclick="toggleRelay('R2')">💨 Room 2 Fan</button>
-        <button id="btnR3" onclick="toggleRelay('R3')">🔌 Room 3 PC</button>
-        <button id="btnR4" onclick="toggleRelay('R4')">🌳 Room 4 Outdoor</button>
-      </div>
-    </div>
 
-    <div class="card">
+    <div class="card full-width">
       <h3>Live Power Draw</h3>
       <div class="value"><span id="powerValue">0.00</span> W</div>
       <div class="sub-value"><span id="voltageValue">0.00</span> V | <span id="currentValue">0.00</span> A</div>
     </div>
 
     <div class="card">
-      <h3>Total House Energy (Today)</h3>
+      <h3>House Energy (Today)</h3>
       <div class="value"><span id="dailyKwh">0.0000</span> kWh</div>
     </div>
 
     <div class="card">
-      <h3>Total House Energy (Month)</h3>
+      <h3>House Energy (Month)</h3>
       <div class="value"><span id="monthlyKwh">0.0000</span> kWh</div>
     </div>
 
-    <div class="card">
-      <h3>Total House Bill (Month)</h3>
+    <div class="card full-width">
+      <h3>Total Estimated Bill (Month)</h3>
       <div class="value" style="color: #ffeb3b;">₹ <span id="billValue">0.00</span></div>
       <p style="font-size: 0.9em; color: #888; margin: 0;">Calculated at ₹5.00 per unit</p>
     </div>
@@ -181,7 +147,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBUfmOzKXHM2I2HRRGnwviIC96WzIQ5ASc",
@@ -190,14 +156,11 @@
       projectId: "home-automation-aeae4",
       storageBucket: "home-automation-aeae4.firebasestorage.app",
       messagingSenderId: "358228143258",
-      appId: "1:358228143258:web:95003c3bb923a0e03b0323",
-      measurementId: "G-GFV37LDEXP"
+      appId: "1:358228143258:web:95003c3bb923a0e03b0323"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
-    let relayStates = { R1: false, R2: false, R3: false, R4: false };
 
     // --- ELECTRICITY RATE CONFIGURATION ---
     const COST_PER_KWH = 5.00; // Rate in Rupees per unit (kWh)
@@ -207,41 +170,33 @@
     onValue(powerRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Live Stats
         document.getElementById('voltageValue').innerText = data.Voltage ? data.Voltage.toFixed(1) : "0.0";
         document.getElementById('currentValue').innerText = data.Current ? data.Current.toFixed(2) : "0.00";
         document.getElementById('powerValue').innerText = data.PowerW ? data.PowerW.toFixed(1) : "0.0";
 
-        // Accumulated Energy
         let dKwh = data.Daily_kWh || 0;
         let mKwh = data.Monthly_kWh || 0;
         
         document.getElementById('dailyKwh').innerText = dKwh.toFixed(4);
         document.getElementById('monthlyKwh').innerText = mKwh.toFixed(4);
 
-        // Total Bill Calculation
         let currentBill = mKwh * COST_PER_KWH;
         document.getElementById('billValue').innerText = currentBill.toFixed(2);
 
-        // --- NEW: ROOMMATE SPLIT CALCULATION ---
         let r1 = data.R1_kWh || 0;
         let r2 = data.R2_kWh || 0;
         let r3 = data.R3_kWh || 0;
         let r4 = data.R4_kWh || 0;
 
-        // Update UI for Room 1
         document.getElementById('r1Kwh').innerText = r1.toFixed(4);
         document.getElementById('r1Cost').innerText = (r1 * COST_PER_KWH).toFixed(2);
 
-        // Update UI for Room 2
         document.getElementById('r2Kwh').innerText = r2.toFixed(4);
         document.getElementById('r2Cost').innerText = (r2 * COST_PER_KWH).toFixed(2);
 
-        // Update UI for Room 3
         document.getElementById('r3Kwh').innerText = r3.toFixed(4);
         document.getElementById('r3Cost').innerText = (r3 * COST_PER_KWH).toFixed(2);
 
-        // Update UI for Room 4
         document.getElementById('r4Kwh').innerText = r4.toFixed(4);
         document.getElementById('r4Cost').innerText = (r4 * COST_PER_KWH).toFixed(2);
       }
@@ -253,36 +208,6 @@
       const isFlame = snapshot.val();
       document.getElementById('flameAlert').style.display = isFlame ? 'block' : 'none';
     });
-
-    // --- 3. LISTEN TO RELAY STATES ---
-    const relaysRef = ref(db, 'Relays');
-    onValue(relaysRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        updateButtonUI('R1', data.R1, "💡 Room 1");
-        updateButtonUI('R2', data.R2, "💨 Room 2");
-        updateButtonUI('R3', data.R3, "🔌 Room 3");
-        updateButtonUI('R4', data.R4, "🌳 Room 4");
-      }
-    });
-
-    function updateButtonUI(relayId, state, labelText) {
-      relayStates[relayId] = state; 
-      const btn = document.getElementById('btn' + relayId);
-      if (state) {
-        btn.classList.add('active');
-        btn.innerText = labelText + " (ON)";
-      } else {
-        btn.classList.remove('active');
-        btn.innerText = labelText + " (OFF)";
-      }
-    }
-
-    // --- 4. CONTROL RELAYS FROM WEB ---
-    window.toggleRelay = function(relayId) {
-      const newState = !relayStates[relayId]; 
-      set(ref(db, 'Relays/' + relayId), newState).catch((error) => console.error(error));
-    };
   </script>
 </body>
 </html>
