@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Home Energy Dashboard</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 { color: #00d2ff; }
+    
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .card {
+      background-color: #1e1e1e;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    
+    .full-width { grid-column: span 2; }
+
+    .value {
+      font-size: 2.2em;
+      font-weight: bold;
+      color: #4caf50;
+      margin: 10px 0;
+    }
+    .sub-value { font-size: 1.2em; color: #00d2ff; }
+
+    /* Relay Buttons */
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    button {
+      background-color: #333;
+      color: white;
+      border: 2px solid #555;
+      padding: 20px 10px;
+      font-size: 1.1em;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: bold;
+    }
+    button.active {
+      background-color: #00d2ff;
+      border-color: #00d2ff;
+      color: #000;
+      box-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
+    }
+
+    /* Roommate Split Grid */
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .split-item {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 8px;
+      border-top: 4px solid #00d2ff;
+    }
+    .split-item h4 { margin: 0 0 10px 0; color: #fff; }
+    .split-item .kwh { color: #aaa; font-size: 0.9em; margin-bottom: 5px; }
+    .split-item .cost { color: #ffeb3b; font-size: 1.4em; font-weight: bold; margin: 0; }
+
+    /* Flame Alert Banner */
+    #flameAlert {
+      display: none;
+      background-color: #ff4c4c;
+      color: white;
+      width: 100%;
+      max-width: 900px;
+      padding: 15px;
+      text-align: center;
+      font-size: 1.5em;
+      font-weight: bold;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      animation: blink 1s infinite alternate;
+    }
+    @keyframes blink { from { opacity: 1; } to { opacity: 0.7; } }
+    
+    /* Responsive Design for mobile */
+    @media (max-width: 600px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .full-width { grid-column: span 1; }
+      .button-grid, .split-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Smart Home Dashboard</h1>
+
+  <div id="flameAlert">🔥 WARNING: FLAME DETECTED! ALL POWER CUT OFF 🔥</div>
+
+  <div class="dashboard">
+    <div class="card full-width">
+      <h3>Device Controls</h3>
+      <div class="button-grid">
+        <button id="btnR1" onclick="toggleRelay('R1')">💡 Room 1 Light</button>
+        <button id="btnR2" onclick="toggleRelay('R2')">💨 Room 2 Fan</button>
+        <button id="btnR3" onclick="toggleRelay('R3')">🔌 Room 3 PC</button>
+        <button id="btnR4" onclick="toggleRelay('R4')">🌳 Room 4 Outdoor</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Live Power Draw</h3>
+      <div class="value"><span id="powerValue">0.00</span> W</div>
+      <div class="sub-value"><span id="voltageValue">0.00</span> V | <span id="currentValue">0.00</span> A</div>
+    </div>
+
+    <div class="card">
+      <h3>Total House Energy (Today)</h3>
+      <div class="value"><span id="dailyKwh">0.0000</span> kWh</div>
+    </div>
+
+    <div class="card">
+      <h3>Total House Energy (Month)</h3>
+      <div class="value"><span id="monthlyKwh">0.0000</span> kWh</div>
+    </div>
+
+    <div class="card">
+      <h3>Total House Bill (Month)</h3>
+      <div class="value" style="color: #ffeb3b;">₹ <span id="billValue">0.00</span></div>
+      <p style="font-size: 0.9em; color: #888; margin: 0;">Calculated at ₹5.00 per unit</p>
+    </div>
+
+    <div class="card full-width">
+      <h3>Roommate Fair-Split Breakdown</h3>
+      <p style="font-size: 0.9em; color: #888; margin: 0;">Exact calculation based on individual room activity.</p>
+      
+      <div class="split-grid">
+        <div class="split-item">
+          <h4>Room 1</h4>
+          <div class="kwh"><span id="r1Kwh">0.0000</span> kWh</div>
+          <div class="cost">₹ <span id="r1Cost">0.00</span></div>
+        </div>
+        <div class="split-item">
+          <h4>Room 2</h4>
+          <div class="kwh"><span id="r2Kwh">0.0000</span> kWh</div>
+          <div class="cost">₹ <span id="r2Cost">0.00</span></div>
+        </div>
+        <div class="split-item">
+          <h4>Room 3</h4>
+          <div class="kwh"><span id="r3Kwh">0.0000</span> kWh</div>
+          <div class="cost">₹ <span id="r3Cost">0.00</span></div>
+        </div>
+        <div class="split-item">
+          <h4>Room 4</h4>
+          <div class="kwh"><span id="r4Kwh">0.0000</span> kWh</div>
+          <div class="cost">₹ <span id="r4Cost">0.00</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUfmOzKXHM2I2HRRGnwviIC96WzIQ5ASc",
+      authDomain: "home-automation-aeae4.firebaseapp.com",
+      databaseURL: "https://home-automation-aeae4-default-rtdb.firebaseio.com", 
+      projectId: "home-automation-aeae4",
+      storageBucket: "home-automation-aeae4.firebasestorage.app",
+      messagingSenderId: "358228143258",
+      appId: "1:358228143258:web:95003c3bb923a0e03b0323",
+      measurementId: "G-GFV37LDEXP"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let relayStates = { R1: false, R2: false, R3: false, R4: false };
+
+    // --- ELECTRICITY RATE CONFIGURATION ---
+    const COST_PER_KWH = 5.00; // Rate in Rupees per unit (kWh)
+
+    // --- 1. LISTEN TO SENSOR & ENERGY DATA ---
+    const powerRef = ref(db, 'PowerData');
+    onValue(powerRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Live Stats
+        document.getElementById('voltageValue').innerText = data.Voltage ? data.Voltage.toFixed(1) : "0.0";
+        document.getElementById('currentValue').innerText = data.Current ? data.Current.toFixed(2) : "0.00";
+        document.getElementById('powerValue').innerText = data.PowerW ? data.PowerW.toFixed(1) : "0.0";
+
+        // Accumulated Energy
+        let dKwh = data.Daily_kWh || 0;
+        let mKwh = data.Monthly_kWh || 0;
+        
+        document.getElementById('dailyKwh').innerText = dKwh.toFixed(4);
+        document.getElementById('monthlyKwh').innerText = mKwh.toFixed(4);
+
+        // Total Bill Calculation
+        let currentBill = mKwh * COST_PER_KWH;
+        document.getElementById('billValue').innerText = currentBill.toFixed(2);
+
+        // --- NEW: ROOMMATE SPLIT CALCULATION ---
+        let r1 = data.R1_kWh || 0;
+        let r2 = data.R2_kWh || 0;
+        let r3 = data.R3_kWh || 0;
+        let r4 = data.R4_kWh || 0;
+
+        // Update UI for Room 1
+        document.getElementById('r1Kwh').innerText = r1.toFixed(4);
+        document.getElementById('r1Cost').innerText = (r1 * COST_PER_KWH).toFixed(2);
+
+        // Update UI for Room 2
+        document.getElementById('r2Kwh').innerText = r2.toFixed(4);
+        document.getElementById('r2Cost').innerText = (r2 * COST_PER_KWH).toFixed(2);
+
+        // Update UI for Room 3
+        document.getElementById('r3Kwh').innerText = r3.toFixed(4);
+        document.getElementById('r3Cost').innerText = (r3 * COST_PER_KWH).toFixed(2);
+
+        // Update UI for Room 4
+        document.getElementById('r4Kwh').innerText = r4.toFixed(4);
+        document.getElementById('r4Cost').innerText = (r4 * COST_PER_KWH).toFixed(2);
+      }
+    });
+
+    // --- 2. LISTEN TO FLAME ALERTS ---
+    const alertRef = ref(db, 'Alerts/Flame');
+    onValue(alertRef, (snapshot) => {
+      const isFlame = snapshot.val();
+      document.getElementById('flameAlert').style.display = isFlame ? 'block' : 'none';
+    });
+
+    // --- 3. LISTEN TO RELAY STATES ---
+    const relaysRef = ref(db, 'Relays');
+    onValue(relaysRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        updateButtonUI('R1', data.R1, "💡 Room 1");
+        updateButtonUI('R2', data.R2, "💨 Room 2");
+        updateButtonUI('R3', data.R3, "🔌 Room 3");
+        updateButtonUI('R4', data.R4, "🌳 Room 4");
+      }
+    });
+
+    function updateButtonUI(relayId, state, labelText) {
+      relayStates[relayId] = state; 
+      const btn = document.getElementById('btn' + relayId);
+      if (state) {
+        btn.classList.add('active');
+        btn.innerText = labelText + " (ON)";
+      } else {
+        btn.classList.remove('active');
+        btn.innerText = labelText + " (OFF)";
+      }
+    }
+
+    // --- 4. CONTROL RELAYS FROM WEB ---
+    window.toggleRelay = function(relayId) {
+      const newState = !relayStates[relayId]; 
+      set(ref(db, 'Relays/' + relayId), newState).catch((error) => console.error(error));
+    };
+  </script>
+</body>
+</html>
