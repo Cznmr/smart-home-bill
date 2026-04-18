@@ -149,10 +149,11 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
+    // --- CRITICAL FIX: Updated databaseURL to the Asia region shown in your Firebase console ---
     const firebaseConfig = {
       apiKey: "AIzaSyBUfmOzKXHM2I2HRRGnwviIC96WzIQ5ASc",
       authDomain: "home-automation-aeae4.firebaseapp.com",
-      databaseURL: "https://home-automation-aeae4-default-rtdb.firebaseio.com", 
+      databaseURL: "https://home-automation-aeae4-default-rtdb.asia-southeast1.firebasedatabase.app", 
       projectId: "home-automation-aeae4",
       storageBucket: "home-automation-aeae4.firebasestorage.app",
       messagingSenderId: "358228143258",
